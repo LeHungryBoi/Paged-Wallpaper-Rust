@@ -3,6 +3,7 @@ package dev.pagedwallpaper.rust
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.DocumentsContract.Document
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -43,13 +44,13 @@ internal object WallpaperBackup {
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
             resolver.query(
                 children,
-                arrayOf(DocumentsContract.Document._ID, DocumentsContract.Document.DISPLAY_NAME),
+                arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME),
                 null,
                 null,
                 null,
             )?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document._ID)
-                val nameColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.DISPLAY_NAME)
+                val idColumn = cursor.getColumnIndexOrThrow(Document.COLUMN_DOCUMENT_ID)
+                val nameColumn = cursor.getColumnIndexOrThrow(Document.COLUMN_DISPLAY_NAME)
                 while (cursor.moveToNext()) {
                     if (cursor.getString(nameColumn) == BACKUP_NAME) {
                         val existing = DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(idColumn))

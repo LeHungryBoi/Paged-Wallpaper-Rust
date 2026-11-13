@@ -1,7 +1,6 @@
 package dev.pagedwallpaper.rust
 
 import android.animation.ValueAnimator
-import android.app.WallpaperService
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -20,6 +19,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.service.wallpaper.WallpaperService
 import android.util.Log
 import android.view.Choreographer
 import android.view.Surface
@@ -109,7 +109,7 @@ class PagedWallpaperService : WallpaperService() {
             super.onCreate(surfaceHolder)
             NativeCore.initialize(filesDir.absolutePath)
             loadState(clearImages = true)
-            currentOffset = snapshot.optDouble("lastKnownOffset", homeOffset()).toFloat().coerceIn(0f, 1f)
+            currentOffset = snapshot.optDouble("lastKnownOffset", homeOffset().toDouble()).toFloat().coerceIn(0f, 1f)
             renderedOffset = currentOffset
             setOffsetNotificationsEnabled(true)
             registerConfigurationReceiver()
@@ -560,7 +560,7 @@ class PagedWallpaperService : WallpaperService() {
                     Log.w(TAG, "Could not read Android Extra Dim state.", error)
                     false
                 }
-                "DARK_THEME" -> resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+                "DARK_THEME" -> resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
                 "SCHEDULED" -> isScheduled(darken)
                 "ALWAYS" -> true
                 else -> false
