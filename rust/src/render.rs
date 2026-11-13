@@ -753,7 +753,10 @@ fn draw_rect(
     )
 }
 
-fn new_paint(env: &mut JNIEnv, alpha: i32) -> jni::errors::Result<JObject> {
+fn new_paint<'local>(
+    env: &mut JNIEnv<'local>,
+    alpha: i32,
+) -> jni::errors::Result<JObject<'local>> {
     let paint = env.new_object("android/graphics/Paint", "(I)V", &[JValue::Int(3)])?;
     env.call_method(
         &paint,

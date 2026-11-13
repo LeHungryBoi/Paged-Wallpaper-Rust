@@ -1,7 +1,7 @@
 use crate::model::{
-    normalize_offsets, starter_pages, CalibrationConfig, DarkenConfig, OriginalMedia, PageItem,
+    normalize_offsets, CalibrationConfig, DarkenConfig, OriginalMedia, PageItem,
     PageTransitionSetting, WallpaperAppState, WallpaperPreset, MAX_PAGE_COUNT, MIN_PAGE_COUNT,
-    SCHEMA_VERSION, SUPPORTED_FRAME_RATES, TRANSITIONS,
+    SUPPORTED_FRAME_RATES, TRANSITIONS,
 };
 use serde_json::{json, Value};
 use std::fs::{self, File};
