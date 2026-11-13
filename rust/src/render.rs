@@ -674,6 +674,13 @@ fn draw_starter(
         0xff334155u32 as i32,
     ];
     let paint = new_paint(env, alpha)?;
+    let tile_mode = env
+        .get_static_field(
+            "android/graphics/Shader$TileMode",
+            "CLAMP",
+            "Landroid/graphics/Shader$TileMode;",
+        )?
+        .l()?;
     let shader = env.new_object(
         "android/graphics/LinearGradient",
         "(FFFFIILandroid/graphics/Shader$TileMode;)V",
@@ -684,11 +691,7 @@ fn draw_starter(
             JValue::Float(height as f32),
             JValue::Int(0xff0f172au32 as i32),
             JValue::Int(colors[page_index % colors.len()]),
-            JValue::Object(&env.get_static_field(
-                "android/graphics/Shader$TileMode",
-                "CLAMP",
-                "Landroid/graphics/Shader$TileMode;",
-            )?.l()?),
+            JValue::Object(&tile_mode),
         ],
     )?;
     env.call_method(
