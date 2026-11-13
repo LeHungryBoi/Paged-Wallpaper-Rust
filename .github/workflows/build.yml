@@ -1,0 +1,115 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rust-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK and NDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.12.1"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Test Rust core
+        working-directory: rust
+        run: cargo test
+
+      - name: Build Android native libraries
+        working-directory: rust
+        run: >
+          ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          cargo ndk
+          -t arm64-v8a
+          -t armeabi-v7a
+          -t x86_64
+          -o ../app/src/main/jniLibs
+          build --release
+
+      - name: Build APK
+        working-directory: .
+        run: gradle assembleDebug -PappVersionCode=${{ github.run_number }} -PappVersionName=0.1.${{ github.run_number }}
+
+      - name: Publish APK GitHub release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT_SHA: ${{ github.sha }}
+        working-directory: .
+        run: |
+          apk_path="$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          if [ -z "$apk_path" ]; then
+            echo "No APK was produced." >&2
+            exit 1
+          fi
+
+          release_tag="rust-build-${RUN_NUMBER}"
+          asset_name="paged-wallpaper-rust-${RUN_NUMBER}.apk"
+          gh release create "$release_tag" "$apk_path#$asset_name" \
+            --title "Rust build ${RUN_NUMBER}" \
+            --notes "Automated APK for commit ${COMMIT_SHA}." \
+            --target "$COMMIT_SHA"
+
+      - name: Keep only the latest three APK releases
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 }
+            );
+            const builds = releases
+              .map((release) => ({
+                release,
+                match: /^rust-build-(\d+)$/.exec(release.tag_name)
+              }))
+              .filter(({ match }) => match !== null)
+              .sort((a, b) => Number(b.match[1]) - Number(a.match[1]));
+
+            for (const { release } of builds.slice(3)) {
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id
+              });
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${release.tag_name}`
+              });
+              core.info(`Deleted old Rust APK release: ${release.tag_name}`);
+            }

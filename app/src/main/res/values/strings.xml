@@ -1,0 +1,5 @@
+<resources>
+  <string name="app_name">Paged Wallpaper Rust</string>
+  <string name="wallpaper_name">Paged Wallpaper Rust</string>
+  <string name="wallpaper_description">A Rust-rendered wallpaper that follows home-screen pages.</string>
+</resources>
